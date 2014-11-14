@@ -1,3 +1,4 @@
+package org.apache.qpid.proton.example.engine;
 
 
 import java.util.ArrayList;
@@ -10,16 +11,6 @@ import org.apache.qpid.proton.engine.Delivery;
 import org.apache.qpid.proton.engine.Link;
 import org.apache.qpid.proton.engine.Sender;
 
-import org.apache.qpid.proton.example.engine.AbstractEventHandler;
-import org.apache.qpid.proton.example.engine.Driver;
-import org.apache.qpid.proton.example.engine.EventHandler;
-import org.apache.qpid.proton.example.engine.Events;
-import org.apache.qpid.proton.example.engine.FlowController;
-import org.apache.qpid.proton.example.engine.Message;
-import org.apache.qpid.proton.example.engine.Pool;
-import org.apache.qpid.proton.example.engine.Router;
-
-
 public class Send extends AbstractEventHandler {
 
     private int count;
@@ -28,17 +19,19 @@ public class Send extends AbstractEventHandler {
     private long startMS;
     private Message msg;
     private byte[] bytes;
+    private boolean sendAll;
 
-    public Send(int count) {
+    public Send(int count, boolean all) {
         this.count = count;
-        this.msg = new Message("Hello World!");
+        this.msg = new Message("E");
         this.bytes = msg.getBytes();
+        this.sendAll = all;
     }
     @Override
     public void onFlow(Link link) {
         if (link instanceof Sender) {
             Sender sender = (Sender) link;
-            if ((sent < count) && sender.getCredit() > 0) {
+            while ((sent < count) && sender.getCredit() > 0) {
                 Delivery dlv = sender.delivery(String.format("send-%s", sent).getBytes());
 
             	if (startMS == 0) {
@@ -48,6 +41,16 @@ public class Send extends AbstractEventHandler {
                 sender.advance();
 
                 ++sent;
+//if (sent %1000 == 0) {
+//    System.out.print('.');
+//}
+if (sent >= count) {
+	    		long endMS = System.currentTimeMillis();
+//    		System.out.println(String.format("\nSent %d messages in %s", sent, formatInterval(endMS - startMS)));
+ 
+}
+                if (!sendAll)
+                    break;
             }
         }
     }
@@ -61,7 +64,7 @@ public class Send extends AbstractEventHandler {
 
         if (settled >= count) {
     		long endMS = System.currentTimeMillis();
-    		System.out.println(String.format("Sent %d messages in %s", settled, formatInterval(endMS - startMS)));
+    		System.out.println(String.format("Settled %d messages in %s", settled, formatSeconds(endMS - startMS)));
             dlv.getLink().getSession().getConnection().close();
         }
     }
@@ -75,6 +78,15 @@ public class Send extends AbstractEventHandler {
         return String.format("%02d:%02d:%02d.%03d", hr, min, sec, ms);
     }
 
+    private static String formatSeconds(final long msElapsed)
+    {
+        final long hr = TimeUnit.MILLISECONDS.toHours(msElapsed);
+        final long min = TimeUnit.MILLISECONDS.toMinutes(msElapsed - TimeUnit.HOURS.toMillis(hr));
+        final long sec = TimeUnit.MILLISECONDS.toSeconds(msElapsed - TimeUnit.HOURS.toMillis(hr) - TimeUnit.MINUTES.toMillis(min));
+        final long ms = TimeUnit.MILLISECONDS.toMillis(msElapsed - TimeUnit.HOURS.toMillis(hr) - TimeUnit.MINUTES.toMillis(min) - TimeUnit.SECONDS.toMillis(sec));
+        return String.format("%02d.%02d", hr*60*60 + min*60 + sec, ms);
+    }
+
     public static void main(String[] argv) throws Exception {
         List<String> switches = new ArrayList<String>();
         List<String> args = new ArrayList<String>();
@@ -86,13 +98,13 @@ public class Send extends AbstractEventHandler {
             }
         }
 
-        // Send 0.0.0.0 100000
+        // Send 0.0.0.0 100000 [-a]
         String address = !args.isEmpty() ? args.remove(0) : "0.0.0.0";
         int count = !args.isEmpty() ? Integer.parseInt(args.remove(0)) : 100000;
-        
+        boolean all = switches.contains("-a");
         Collector collector = Collector.Factory.create();
 
-        Send send = new Send(count);
+        Send send = new Send(count, all);
 
         Driver driver = new Driver(collector, send);
 
