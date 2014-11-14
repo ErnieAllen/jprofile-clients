@@ -18,6 +18,8 @@
  * under the License.
  *
  */
+package org.apache.qpid.proton.example.engine;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -26,13 +28,6 @@ import org.apache.qpid.proton.engine.Connection;
 import org.apache.qpid.proton.engine.Delivery;
 import org.apache.qpid.proton.engine.Link;
 import org.apache.qpid.proton.engine.Receiver;
-
-import org.apache.qpid.proton.example.engine.AbstractEventHandler;
-import org.apache.qpid.proton.example.engine.Driver;
-import org.apache.qpid.proton.example.engine.FlowController;
-import org.apache.qpid.proton.example.engine.Message;
-import org.apache.qpid.proton.example.engine.Router;
-import org.apache.qpid.proton.example.engine.Handshaker;
 
 /**
  * Small app using the java Engine/Message API.
@@ -61,12 +56,15 @@ public class Recv extends AbstractEventHandler {
         	Receiver receiver = (Receiver) dlv.getLink();
 
             if (!dlv.isPartial()) {
-                byte[] bytes = new byte[dlv.pending()];
-                receiver.recv(bytes, 0, bytes.length);
-                Message msg = new Message(bytes);
+                //byte[] bytes = new byte[dlv.pending()];
+                //receiver.recv(bytes, 0, bytes.length);
+                //Message msg = new Message(bytes);
 
                 ++received;
                 dlv.settle();
+//if (received % 1000 == 0) {
+//    System.out.print('*');
+//}
             }
         }
     }
@@ -75,6 +73,8 @@ public class Recv extends AbstractEventHandler {
     public void onRemoteClose(Connection conn) {
     	//long endMS = System.currentTimeMillis();
         //System.out.println("Got last message at: " + endMS);
+//System.out.println("\nRemoteClosed");
+System.exit(0);
         received = 0;
     }
 
@@ -91,9 +91,9 @@ public class Recv extends AbstractEventHandler {
 
 
         // Recv localhost 5672 100000
-        String host = !args.isEmpty() ? args.remove(0) : "localhost";
-        int port = !args.isEmpty() ? Integer.parseInt(args.remove(0)) : 5672;
-        int count = args.isEmpty() ? 100000 : Integer.parseInt(args.remove(0));
+        String host = !args.isEmpty() ? args.remove(0) : "0.0.0.0";
+        int port = !args.isEmpty() ? Integer.parseInt(args.remove(0)) : 5673;
+        int count = args.isEmpty() ? 1000 : Integer.parseInt(args.remove(0));
 
         Collector collector = Collector.Factory.create();
         Router router = new Router();
